@@ -4,15 +4,12 @@ package main
 Written by Kevin Gillanders - 2022-06-15
 */
 
-
 import (
 	"bufio"
 	"fmt"
 	"log"
 	"os"
 	"strings"
-
-	"github.com/k0kubun/pp/v3"
 )
 
 type SqlOutline struct{
@@ -33,7 +30,6 @@ func main() {
 	sqlOutline := *ReadInSQLFile(SqlOutlineFile)
 	log.Println("Done reading in outline")
 
-	pp.Print(sqlOutline)
 
 	OutputSQL(sqlOutline)	
 }
@@ -49,8 +45,11 @@ func GenerateSQLOutlineFile(colDumpFile string) string {
 	var cols []string
 	for scanner.Scan(){
 		tableOutline := strings.Fields(scanner.Text())
+
+		//If we are now looking at a new table
 		if tableOutline[2] != currentTable{
 			
+			//If not the first table
 			if currentTable != ""{
 				outPutFile.WriteString(fmt.Sprint(strings.Join(cols, "	"), "\n"))
 			}
@@ -71,6 +70,8 @@ func GenerateSQLOutlineFile(colDumpFile string) string {
 		cols = append(cols, tableOutline[3])
 
 	}	
+	// ensure that the last table details are written
+	outPutFile.WriteString(fmt.Sprint(strings.Join(cols, "	"), "\n"))
 
 	return outPutFileName
 }
@@ -86,20 +87,24 @@ func OutputSQL(sqlOutlines [] SqlOutline) {
 
 	outPutFileName := "OutputSQL.sql"
 	outPutFile, _  := os.Create(outPutFileName)
+	defer outPutFile.Close()
 
 	outPutFile.WriteString("\nBEGIN TRAN\n\n")
 
 	sqlToPrint := "\nUPDATE %v\nSET\n%v\nFROM\n\t%v AS b\nWHERE\n\t%v.%v = b.%v\n--========================\n\n"
-	var colDef string
 
 	for _, sqlOutline := range sqlOutlines{
-
+		
+		var colDef string
 		for i, col := range sqlOutline.columns{
 			
 			colDef = fmt.Sprint(colDef, "\t", col, " = b.", col)
 			
+			//Skip final comma
 			if i != len(sqlOutline.columns) - 1 {
 				colDef = fmt.Sprint(colDef, ",\n")
+			}else{
+				colDef = fmt.Sprint(colDef)
 			}	
 		}
 
