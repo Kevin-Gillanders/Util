@@ -1,0 +1,21 @@
+# A simple script to move all data from one database table to another.
+The use case for this is if you are moving data between two identical tables.
+So if you were moving data from production to dev this will generate the SQL 
+you need to run to do this.
+This has only been tested on SQL Server(t-SQL), so YMMV. You would need to modify the SQLToPrint pattern in 
+the OutPutSQL function
+
+## Gather columns
+All the script needs is a list of the columns from the source table.
+This data can be fetched using the following SQL command : 
+```
+use YOURTABLEHERE
+SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+```
+Copy this data without headers into a file called 
+```colInput.txt```
+
+The sql will be output in a file called 
+```OutputSQL.sql``` you can check this before you run this. This SQL file is wrapped in a transaction block so that if anything should be incorrect the result can be rolled back
+## Possible issues
+This id of the column is assumed to be the first column, this may not be the case for you and as such you will need to manually edit the sql
