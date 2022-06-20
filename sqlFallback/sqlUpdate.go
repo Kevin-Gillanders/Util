@@ -15,6 +15,7 @@ import (
 type SqlOutline struct{
 	source, destination, key string
 	columns [] string
+	hasIdentity bool
 }
 
 
@@ -23,7 +24,7 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 	
 	log.Println("Generating SQL outline")
-	SqlOutlineFile :=  GenerateSQLOutlineFile(colDumpFile)
+	SqlOutlineFile :=  GenerateSQLOutlineFile(colDumpFile, true)
 	log.Println("Done Generating SQL outline")
 
 	log.Println("Reading SQL outline from : ", SqlOutlineFile)
@@ -34,7 +35,7 @@ func main() {
 	OutputSQL(sqlOutline)	
 }
 
-func GenerateSQLOutlineFile(colDumpFile string) string {
+func GenerateSQLOutlineFile(colDumpFile string, ignoreIdentity bool) string {
 	outPutFileName := "SqlOutline.txt"
 	outPutFile, _  := os.Create(outPutFileName)
 	defer outPutFile.Close()
@@ -58,14 +59,23 @@ func GenerateSQLOutlineFile(colDumpFile string) string {
 			db := tableOutline[0]
 			dbType := tableOutline[1]
 			currentTable = tableOutline[2]
-			ID := tableOutline[3]
+			hasIdentity := tableOutline[4]
 			
-			outPutFile.WriteString(fmt.Sprintf("%v [%v].[%v].%v %v\n", 
+			var ID string 
+			if hasIdentity == "1"{
+				ID = tableOutline[3]
+			} else {
+				ID = "PLACEHOLDER"
+			}
+
+
+			outPutFile.WriteString(fmt.Sprintf("%v [%v].[%v].%v %v %v\n", 
 				currentTable, 
 				db,
 				dbType,
 				currentTable, 
-				ID))
+				ID,
+				hasIdentity))
 		}
 		cols = append(cols, tableOutline[3])
 
@@ -96,14 +106,23 @@ func OutputSQL(sqlOutlines [] SqlOutline) {
 	for _, sqlOutline := range sqlOutlines{
 		
 		var colDef string
+	
+		if !sqlOutline.hasIdentity{
+			log.Println("WARNING : The following table does not have an identity column : ", sqlOutline.destination)
+			log.Println("WARNING : Please ensure that you manually specify a column which is unique and replace PLACEHOLDER")
+		}
 		for i, col := range sqlOutline.columns{
+			if(i == 0 && sqlOutline.hasIdentity ){
+				colDef = fmt.Sprint(colDef, "\t--", col, " = b.", col, ",\n")
+				continue
+			}
 			
 			colDef = fmt.Sprint(colDef, "\t", col, " = b.", col)
 			
-			//Skip final comma
 			if i != len(sqlOutline.columns) - 1 {
 				colDef = fmt.Sprint(colDef, ",\n")
 			}else{
+				//Skip final comma
 				colDef = fmt.Sprint(colDef)
 			}	
 		}
@@ -133,6 +152,7 @@ func ReadInSQLFile(inputFile string) *[]SqlOutline{
 		sqlOutline.destination = infoLine[0]
 		sqlOutline.source = infoLine[1]
 		sqlOutline.key = infoLine[2]
+		sqlOutline.hasIdentity = infoLine[3] == "1"
 
 		sqlOutline.columns = cols
 

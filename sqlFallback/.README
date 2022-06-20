@@ -9,8 +9,19 @@ the OutPutSQL function
 All the script needs is a list of the columns from the source table.
 This data can be fetched using the following SQL command : 
 ```
-use YOURTABLEHERE
-SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+USE YOURTABLEHERE
+SELECT 
+	TABLE_CATALOG, 
+	TABLE_SCHEMA, 
+	TABLE_NAME, 
+	COLUMN_NAME, 
+	COLUMNPROPERTY(object_id(TABLE_SCHEMA+'.'+TABLE_NAME), COLUMN_NAME, 'IsIdentity')   
+FROM 
+	INFORMATION_SCHEMA.COLUMNS
+ORDER BY 
+	TABLE_NAME, 
+	COLUMN_NAME,  
+	COLUMNPROPERTY(object_id(TABLE_SCHEMA+'.'+TABLE_NAME), COLUMN_NAME, 'IsIdentity') DESC
 ```
 Copy this data without headers into a file called 
 ```colInput.txt```
